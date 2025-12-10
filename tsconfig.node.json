@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    // Target Node.js environment for build tools
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+
+    // Type Checking
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Emit
+    "isolatedModules": true,
+
+    // Module System
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    // Path Resolution
+    "composite": true,
+    
+    // Type Acquisition
+    "types": ["node"]
+  }
+}
+
