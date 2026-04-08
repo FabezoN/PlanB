@@ -9,10 +9,16 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#ffffff' },
+          contentStyle: { backgroundColor: '#FDFAEA' },
         }}
       >
         <Stack.Screen name="index" />
+        <Stack.Screen
+          name="profile"
+          options={{
+            animation: 'slide_from_right',
+          }}
+        />
         <Stack.Screen 
           name="bar/[id]" 
           options={{

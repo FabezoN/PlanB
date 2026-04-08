@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,48 +6,59 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Bar, Review } from '../src/types';
+import { useFocusEffect } from '@react-navigation/native';
+import { RefreshCw, Heart } from 'lucide-react-native';
+import { Bar } from '../src/types';
 import { BarCard } from '../src/components/BarCard';
-import { FilterBar } from '../src/components/FilterBar';
+import { FilterBar, ColorFilter } from '../src/components/FilterBar';
 import { MapView } from '../src/components/MapView';
 import { AuthModal } from '../src/components/AuthModal';
+import { BottomTabBar } from '../src/components/BottomTabBar';
+import { LogoPlanB } from '../src/components/LogoPlanB';
 import { getAllBars, seedDatabase } from '../src/utils/api';
 import { getSupabaseClient } from '../src/utils/supabase/client';
+import { useUserPrefs } from '../src/hooks/useUserPrefs';
 import * as Location from 'expo-location';
 
 const supabase = getSupabaseClient();
 
-// Icons as simple components
-const MapIcon = () => <Text className="text-2xl">🗺️</Text>;
-const ListIcon = () => <Text className="text-2xl">📋</Text>;
-const UserIcon = () => <Text className="text-2xl">👤</Text>;
-const DatabaseIcon = () => <Text className="text-2xl">💾</Text>;
-const NavigationIcon = () => <Text className="text-2xl">🧭</Text>;
+type ActiveTab = 'list' | 'map' | 'favorites';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [view, setView] = useState<'map' | 'list'>('list');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('list');
   const [onlyHappyHour, setOnlyHappyHour] = useState(false);
-  const [sortBy, setSortBy] = useState('rating');
-  const [userLocation, setUserLocation] = useState<[number, number]>([48.8566, 2.3522]);
+  const [colorFilter, setColorFilter] = useState<ColorFilter>('all');
+  const [minRating, setMinRating] = useState(0);
+  const [selectedType, setSelectedType] = useState('all');
+  const [userLocation, setUserLocation] = useState<[number, number]>([44.8378, -0.5792]);
 
-  // Auth state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  // Data state
   const [bars, setBars] = useState<Bar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
+
+  const { favorites, toggleFavorite, getPriceColor, reloadPrefs } = useUserPrefs();
 
   useEffect(() => {
     checkSession();
     loadBars();
     requestLocation();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadPrefs();
+      checkSession();
+      loadBars();
+    }, [])
+  );
 
   const requestLocation = async () => {
     try {
@@ -56,233 +67,230 @@ export default function HomeScreen() {
         const location = await Location.getCurrentPositionAsync({});
         setUserLocation([location.coords.latitude, location.coords.longitude]);
       }
-    } catch (error) {
-      console.error('Error getting location:', error);
-    }
+    } catch (_) {}
   };
 
   const checkSession = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session) {
-      setUser(session.user);
-      await AsyncStorage.setItem('access_token', session.access_token);
-    }
+    const { data: { session } } = await supabase.auth.getSession();
+    setUser(session?.user ?? null);
   };
 
   const loadBars = async () => {
     setIsLoading(true);
     const { data, error } = await getAllBars();
-
-    if (error) {
-      console.error('Error loading bars:', error);
-    } else if (data) {
-      setBars(data.bars || []);
-    }
-
+    if (!error && data) setBars(data.bars || []);
     setIsLoading(false);
   };
 
-  const handleBarClick = (bar: Bar) => {
-    router.push(`/bar/${bar.id}`);
+  const handlePullToRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    const { data, error } = await getAllBars();
+    if (!error && data) setBars(data.bars || []);
+    setIsRefreshing(false);
+  }, []);
+
+  const handleBarClick = (bar: Bar) => router.push(`/bar/${bar.id}`);
+  const handleAuthSuccess = (_token: string, userData: any) => setUser(userData);
+
+  const handleAddBar = () => {
+    if (!user) {
+      Alert.alert(
+        'Connexion requise',
+        'Vous devez être connecté pour ajouter un bar.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Se connecter', onPress: () => setIsAuthModalOpen(true) },
+        ]
+      );
+      return;
+    }
+    router.push('/bar/add');
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    await AsyncStorage.removeItem('access_token');
-    setUser(null);
-  };
-
-  const handleAuthSuccess = (accessToken: string, userData: any) => {
-    setUser(userData);
+  const handleFavoritesTab = () => {
+    if (!user) {
+      Alert.alert(
+        'Connexion requise',
+        'Connectez-vous pour accéder à vos bars favoris.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Se connecter', onPress: () => setIsAuthModalOpen(true) },
+        ]
+      );
+      return;
+    }
+    setActiveTab('favorites');
   };
 
   const handleSeedDatabase = async () => {
     setIsSeeding(true);
     const { error } = await seedDatabase();
-
     if (error) {
-      console.error('Error seeding database:', error);
       Alert.alert('Erreur', "Erreur lors de l'initialisation de la base de données");
     } else {
-      Alert.alert('Succès', 'Base de données initialisée avec succès !');
+      Alert.alert('Succès', 'Base de données initialisée !');
       await loadBars();
     }
-
     setIsSeeding(false);
   };
 
   const checkHappyHour = (bar: Bar) => {
     const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    return (
-      currentTime >= bar.happyHourStart && currentTime <= bar.happyHourEnd
-    );
+    const t = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    return t >= bar.happyHourStart && t <= bar.happyHourEnd;
   };
 
+  const availableTypes = useMemo(() => {
+    const types = bars
+      .map((b) => b?.type)
+      .filter((t): t is string => !!t);
+    return [...new Set(types)].sort();
+  }, [bars]);
+
   const filteredAndSortedBars = useMemo(() => {
-    let filtered = bars.filter(
-      (bar): bar is Bar => bar !== null && bar !== undefined
-    );
-
-    if (onlyHappyHour) {
-      filtered = filtered.filter(checkHappyHour);
-    }
-
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'rating':
-          return (b?.rating || 0) - (a?.rating || 0);
-        case 'price-low':
-          return (a?.prices?.beer || 0) - (b?.prices?.beer || 0);
-        case 'price-high':
-          return (b?.prices?.beer || 0) - (a?.prices?.beer || 0);
-        case 'distance':
-          const distA = Math.sqrt(
-            Math.pow((a?.latitude || 0) - userLocation[0], 2) +
-              Math.pow((a?.longitude || 0) - userLocation[1], 2)
-          );
-          const distB = Math.sqrt(
-            Math.pow((b?.latitude || 0) - userLocation[0], 2) +
-              Math.pow((b?.longitude || 0) - userLocation[1], 2)
-          );
-          return distA - distB;
-        default:
-          return 0;
-      }
-    });
-
+    let filtered = bars.filter((bar): bar is Bar => bar !== null && bar !== undefined);
+    if (onlyHappyHour) filtered = filtered.filter(checkHappyHour);
+    if (colorFilter !== 'all') filtered = filtered.filter((bar) => getPriceColor(bar.prices?.beer || 0) === colorFilter);
+    if (minRating > 0) filtered = filtered.filter((bar) => (bar.rating || 0) >= minRating);
+    if (selectedType !== 'all') filtered = filtered.filter((bar) => bar.type === selectedType);
+    // Trier par note par défaut
+    filtered.sort((a, b) => (b?.rating || 0) - (a?.rating || 0));
     return filtered;
-  }, [bars, onlyHappyHour, sortBy, userLocation]);
+  }, [bars, onlyHappyHour, colorFilter, minRating, selectedType, userLocation, getPriceColor]);
+
+  const favoriteBars = useMemo(
+    () => filteredAndSortedBars.filter((b) => favorites.includes(b.id)),
+    [filteredAndSortedBars, favorites]
+  );
+
+  const displayedBars = activeTab === 'favorites' ? favoriteBars : filteredAndSortedBars;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1" style={{ backgroundColor: '#FDFAEA' }}>
       {/* Header */}
-      <View className="bg-orange-500 pt-12 pb-4 px-4 shadow-lg">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3">
-            <NavigationIcon />
-            <View>
-              <Text className="text-white text-2xl font-bold">Plan B</Text>
-              <Text className="text-orange-100 text-sm">
-                Trouvez les meilleurs happy hours
-              </Text>
-            </View>
-          </View>
-
-          <View className="flex-row items-center gap-2">
-            {bars.length === 0 && !isLoading && (
-              <TouchableOpacity
-                onPress={handleSeedDatabase}
-                disabled={isSeeding}
-                className="bg-white px-3 py-2 rounded-lg flex-row items-center"
-              >
-                {isSeeding ? (
-                  <ActivityIndicator size="small" color="#f97316" />
-                ) : (
-                  <DatabaseIcon />
-                )}
-              </TouchableOpacity>
-            )}
-
-            {user ? (
-              <TouchableOpacity
-                onPress={handleSignOut}
-                className="bg-white p-2 rounded-lg"
-              >
-                <Text className="text-orange-500 font-semibold">Déconnexion</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                onPress={() => setIsAuthModalOpen(true)}
-                className="bg-white px-3 py-2 rounded-lg flex-row items-center gap-2"
-              >
-                <UserIcon />
-                <Text className="text-orange-500 font-semibold">Connexion</Text>
-              </TouchableOpacity>
-            )}
-
-            <View className="flex-row gap-1">
-              <TouchableOpacity
-                onPress={() => setView('list')}
-                className={`p-2 rounded-lg ${view === 'list' ? 'bg-white' : 'bg-orange-400'}`}
-              >
-                <ListIcon />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setView('map')}
-                className={`p-2 rounded-lg ${view === 'map' ? 'bg-white' : 'bg-orange-400'}`}
-              >
-                <MapIcon />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+      <View style={{ backgroundColor: '#8E1212', paddingTop: 52, paddingBottom: 6, alignItems: 'center', justifyContent: 'center' }}>
+        {/* Bouton refresh positionné en absolu à droite */}
+        <TouchableOpacity
+          onPress={handleSeedDatabase}
+          disabled={isSeeding}
+          style={{
+            position: 'absolute',
+            right: 20,
+            bottom: 6,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(253, 250, 234, 0.15)',
+          }}
+        >
+          {isSeeding
+            ? <ActivityIndicator size="small" color="#FDFAEA" />
+            : <RefreshCw size={18} color="#FDFAEA" />
+          }
+        </TouchableOpacity>
+        <LogoPlanB size={64} />
       </View>
 
-      {/* Filters */}
+      {/* Filters — présents sur les 3 onglets */}
       <FilterBar
         onlyHappyHour={onlyHappyHour}
         setOnlyHappyHour={setOnlyHappyHour}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
+        colorFilter={colorFilter}
+        setColorFilter={setColorFilter}
+        minRating={minRating}
+        setMinRating={setMinRating}
+        selectedType={selectedType}
+        setSelectedType={setSelectedType}
+        availableTypes={availableTypes}
+        isAuthenticated={!!user}
       />
 
       {/* Main Content */}
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#f97316" />
-          <Text className="text-gray-500 mt-4">Chargement des bars...</Text>
-        </View>
-      ) : view === 'list' ? (
-        <ScrollView className="flex-1 p-4">
-          {filteredAndSortedBars.length === 0 ? (
-            <View className="items-center py-12">
-              <Text className="text-gray-500 text-center">
-                {bars.length === 0
-                  ? "Aucun bar dans la base de données. Cliquez sur 'Initialiser les données' pour commencer."
-                  : 'Aucun bar trouvé avec ces critères'}
-              </Text>
-            </View>
-          ) : (
-            <View className="gap-4">
-              {filteredAndSortedBars.map((bar) => (
-                <BarCard
-                  key={bar.id}
-                  bar={bar}
-                  onClick={() => handleBarClick(bar)}
-                  isHappyHourActive={checkHappyHour(bar)}
+      <View className="flex-1">
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#8E1212" />
+            <Text className="mt-4 opacity-60" style={{ color: '#100906' }}>Chargement des bars...</Text>
+          </View>
+        ) : activeTab === 'map' ? (
+          <MapView
+            bars={filteredAndSortedBars}
+            center={userLocation}
+            onBarClick={handleBarClick}
+            checkHappyHour={checkHappyHour}
+          />
+        ) : (
+          <ScrollView
+            className="flex-1 px-4 pt-3"
+            refreshControl={
+              activeTab === 'list' ? (
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handlePullToRefresh}
+                  colors={['#8E1212']}
+                  tintColor="#8E1212"
+                  title="Actualisation..."
+                  titleColor="#8E1212"
                 />
-              ))}
-            </View>
-          )}
-        </ScrollView>
-      ) : (
-        <MapView
-          bars={filteredAndSortedBars}
-          center={userLocation}
-          onBarClick={handleBarClick}
-          checkHappyHour={checkHappyHour}
+              ) : undefined
+            }
+          >
+            {displayedBars.length === 0 ? (
+              <View className="items-center py-16">
+                {activeTab === 'favorites' ? (
+                  <>
+                    <Heart size={48} color="#E8E0D0" strokeWidth={1.5} />
+                    <Text className="text-base font-bold mt-4 mb-1" style={{ color: '#100906' }}>
+                      Aucun favori
+                    </Text>
+                    <Text className="text-sm text-center opacity-60" style={{ color: '#100906' }}>
+                      Appuyez sur le cœur d'un bar{'\n'}pour l'ajouter à vos favoris
+                    </Text>
+                  </>
+                ) : (
+                  <Text className="text-center opacity-50" style={{ color: '#100906' }}>
+                    {bars.length === 0
+                      ? 'Aucun bar. Tirez vers le bas pour actualiser.'
+                      : 'Aucun bar avec ces critères'}
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <View className="gap-4 pb-28">
+                {displayedBars.map((bar) => (
+                  <BarCard
+                    key={bar.id}
+                    bar={bar}
+                    onClick={() => handleBarClick(bar)}
+                    isHappyHourActive={checkHappyHour(bar)}
+                    isFavorite={favorites.includes(bar.id)}
+                    onToggleFavorite={toggleFavorite}
+                    priceColor={user ? getPriceColor(bar.prices?.beer || 0) : undefined}
+                  />
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* Bottom Tab Bar */}
+      <View className="absolute bottom-0 left-0 right-0">
+        <BottomTabBar
+          activeTab={activeTab}
+          user={user}
+          favorites={favorites}
+          onTabPress={(tab) => {
+            if (tab === 'favorites') { handleFavoritesTab(); return; }
+            setActiveTab(tab as 'list' | 'map');
+          }}
+          onAddPress={handleAddBar}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
         />
-      )}
+      </View>
 
-      {/* Floating Action Button - Add Bar */}
-      <TouchableOpacity
-        onPress={() => router.push('/bar/add')}
-        className="absolute bottom-6 right-6 bg-orange-500 rounded-full w-16 h-16 items-center justify-center shadow-lg"
-        style={{
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 4,
-        }}
-      >
-        <Text className="text-white text-3xl">+</Text>
-      </TouchableOpacity>
-
-      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

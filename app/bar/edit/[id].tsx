@@ -14,9 +14,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getBar, updateBar } from '../../../src/utils/api';
 import { Bar } from '../../../src/types';
 
-const ClockIcon = () => <Text className="text-xl">🕐</Text>;
-const EuroIcon = () => <Text className="text-xl">💶</Text>;
-
 export default function EditBarScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -25,7 +22,6 @@ export default function EditBarScreen() {
   const [error, setError] = useState('');
   const [bar, setBar] = useState<Bar | null>(null);
 
-  // Form state
   const [happyHourStart, setHappyHourStart] = useState('');
   const [happyHourEnd, setHappyHourEnd] = useState('');
   const [beerPrice, setBeerPrice] = useState('');
@@ -89,12 +85,7 @@ export default function EditBarScreen() {
       Alert.alert(
         'Succès !',
         'Le bar a été mis à jour avec succès',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
+        [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (err: any) {
       console.error('Update bar error:', err);
@@ -106,9 +97,9 @@ export default function EditBarScreen() {
 
   if (isLoading || !bar) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#f97316" />
-        <Text className="text-gray-500 mt-4">Chargement...</Text>
+      <View className="flex-1 items-center justify-center bg-planb-cream">
+        <ActivityIndicator size="large" color="#8E1212" />
+        <Text className="text-planb-dark mt-4 opacity-60">Chargement...</Text>
       </View>
     );
   }
@@ -116,41 +107,42 @@ export default function EditBarScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
+      className="flex-1 bg-planb-cream"
     >
       <View className="flex-1">
         {/* Header */}
-        <View className="bg-orange-500 pt-12 pb-4 px-4">
+        <View className="pt-14 pb-5 px-5" style={{ backgroundColor: '#8E1212' }}>
           <View className="flex-row items-center justify-between">
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text className="text-white text-3xl">←</Text>
+            <TouchableOpacity onPress={() => router.back()} className="w-10">
+              <Text className="text-planb-cream text-2xl">←</Text>
             </TouchableOpacity>
-            <Text className="text-white text-xl font-bold">Modifier le bar</Text>
-            <View className="w-8" />
+            <Text className="text-planb-cream text-xl font-bold">Modifier</Text>
+            <View className="w-10" />
           </View>
         </View>
 
-        <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
           {/* Bar Info */}
-          <View className="bg-gray-50 rounded-lg p-4 mb-6">
-            <Text className="text-lg font-bold mb-1">{bar.name}</Text>
-            <Text className="text-gray-600">{bar.address}</Text>
-            <Text className="text-sm text-gray-500 mt-2">{bar.type}</Text>
+          <View className="rounded-2xl p-4 mb-5" style={{ backgroundColor: '#F8ECAB' }}>
+            <Text className="text-lg font-bold text-planb-dark">{bar.name}</Text>
+            <Text className="text-planb-dark opacity-60 mt-1">{bar.address}</Text>
+            <View className="self-start mt-2 rounded-full px-3 py-1" style={{ backgroundColor: 'rgba(142, 18, 18, 0.1)' }}>
+              <Text className="text-xs font-semibold" style={{ color: '#8E1212' }}>{bar.type}</Text>
+            </View>
           </View>
 
           {/* Happy Hour */}
-          <View className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-            <View className="flex-row items-center gap-2 mb-4">
-              <ClockIcon />
-              <Text className="text-lg font-semibold">Horaires Happy Hour</Text>
-            </View>
+          <View className="bg-white rounded-2xl p-5 mb-4" style={{ shadowColor: '#100906', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
+            <Text className="text-lg font-bold text-planb-dark mb-4">🕐 Horaires Happy Hour</Text>
 
             <View className="flex-row gap-3 mb-2">
               <View className="flex-1">
-                <Text className="font-semibold mb-2">Début</Text>
+                <Text className="font-semibold text-planb-dark mb-2">Début</Text>
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3"
+                  className="rounded-xl px-4 py-3.5 text-planb-dark"
+                  style={{ backgroundColor: '#FDFAEA', borderWidth: 1, borderColor: '#E8E0D0' }}
                   placeholder="17:00"
+                  placeholderTextColor="#A09080"
                   value={happyHourStart}
                   onChangeText={setHappyHourStart}
                   keyboardType="numbers-and-punctuation"
@@ -158,32 +150,33 @@ export default function EditBarScreen() {
               </View>
 
               <View className="flex-1">
-                <Text className="font-semibold mb-2">Fin</Text>
+                <Text className="font-semibold text-planb-dark mb-2">Fin</Text>
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3"
+                  className="rounded-xl px-4 py-3.5 text-planb-dark"
+                  style={{ backgroundColor: '#FDFAEA', borderWidth: 1, borderColor: '#E8E0D0' }}
                   placeholder="20:00"
+                  placeholderTextColor="#A09080"
                   value={happyHourEnd}
                   onChangeText={setHappyHourEnd}
                   keyboardType="numbers-and-punctuation"
                 />
               </View>
             </View>
-            <Text className="text-xs text-gray-500">Format: HH:MM (ex: 17:00)</Text>
+            <Text className="text-xs text-planb-dark opacity-40">Format: HH:MM</Text>
           </View>
 
           {/* Prices */}
-          <View className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-            <View className="flex-row items-center gap-2 mb-4">
-              <EuroIcon />
-              <Text className="text-lg font-semibold">Prix Happy Hour</Text>
-            </View>
+          <View className="bg-white rounded-2xl p-5 mb-4" style={{ shadowColor: '#100906', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
+            <Text className="text-lg font-bold text-planb-dark mb-4">💶 Prix Happy Hour</Text>
 
             <View className="flex-row gap-3">
               <View className="flex-1">
-                <Text className="font-semibold mb-2">Bière (€)</Text>
+                <Text className="font-semibold text-planb-dark mb-2">Bière (€)</Text>
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3"
+                  className="rounded-xl px-4 py-3.5 text-planb-dark"
+                  style={{ backgroundColor: '#FDFAEA', borderWidth: 1, borderColor: '#E8E0D0' }}
                   placeholder="3.50"
+                  placeholderTextColor="#A09080"
                   value={beerPrice}
                   onChangeText={setBeerPrice}
                   keyboardType="decimal-pad"
@@ -191,10 +184,12 @@ export default function EditBarScreen() {
               </View>
 
               <View className="flex-1">
-                <Text className="font-semibold mb-2">Cocktail (€)</Text>
+                <Text className="font-semibold text-planb-dark mb-2">Cocktail (€)</Text>
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-4 py-3"
+                  className="rounded-xl px-4 py-3.5 text-planb-dark"
+                  style={{ backgroundColor: '#FDFAEA', borderWidth: 1, borderColor: '#E8E0D0' }}
                   placeholder="6.00"
+                  placeholderTextColor="#A09080"
                   value={cocktailPrice}
                   onChangeText={setCocktailPrice}
                   keyboardType="decimal-pad"
@@ -204,34 +199,32 @@ export default function EditBarScreen() {
           </View>
 
           {error ? (
-            <View className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <Text className="text-red-600 text-center">{error}</Text>
+            <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: '#FEE2E2' }}>
+              <Text className="text-center font-semibold" style={{ color: '#8E1212' }}>{error}</Text>
             </View>
           ) : null}
 
-          {/* Save Button */}
+          {/* Save */}
           <TouchableOpacity
             onPress={handleSave}
             disabled={isSaving}
-            className={`py-4 rounded-lg mb-8 ${
-              isSaving ? 'bg-orange-300' : 'bg-orange-500'
-            }`}
+            className="py-4 rounded-xl mb-4 items-center"
+            style={{ backgroundColor: isSaving ? '#D4A08A' : '#FF8B60' }}
           >
             {isSaving ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color="#FDFAEA" />
             ) : (
-              <Text className="text-white text-center font-semibold text-lg">
-                Enregistrer les modifications
+              <Text className="text-planb-cream text-center font-bold text-lg">
+                Enregistrer
               </Text>
             )}
           </TouchableOpacity>
 
-          <Text className="text-xs text-gray-500 text-center mb-4">
-            💡 Seuls les horaires et les prix peuvent être modifiés
+          <Text className="text-xs text-planb-dark opacity-40 text-center mb-8">
+            Seuls les horaires et les prix peuvent être modifiés
           </Text>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
   );
 }
-

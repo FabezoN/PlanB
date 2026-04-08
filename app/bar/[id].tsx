@@ -8,23 +8,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Pencil, X, MapPin, Clock, Star, User, Plus } from 'lucide-react-native';
 import { Bar, Review } from '../../src/types';
 import { getBar, getBarReviews } from '../../src/utils/api';
 import { AddReviewModal } from '../../src/components/AddReviewModal';
 import { AuthModal } from '../../src/components/AuthModal';
+import { DefaultBarPhoto } from '../../src/components/DefaultBarPhoto';
 import { getSupabaseClient } from '../../src/utils/supabase/client';
 
 const supabase = getSupabaseClient();
-
-const MapPinIcon = () => <Text>📍</Text>;
-const ClockIcon = () => <Text>🕐</Text>;
-const StarIcon = ({ filled }: { filled: boolean }) => (
-  <Text className="text-lg">{filled ? '⭐' : '☆'}</Text>
-);
-const EuroIcon = () => <Text>€</Text>;
-const UserIcon = () => <Text>👤</Text>;
-const PlusIcon = () => <Text className="text-xl">+</Text>;
 
 export default function BarDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,12 +34,8 @@ export default function BarDetailScreen() {
   }, [id]);
 
   const checkSession = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session) {
-      setUser(session.user);
-    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) setUser(session.user);
   };
 
   const loadBarDetails = async () => {
@@ -98,8 +86,8 @@ export default function BarDetailScreen() {
 
   if (isLoading || !bar) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#f97316" />
+      <View className="flex-1 items-center justify-center bg-planb-cream">
+        <ActivityIndicator size="large" color="#8E1212" />
       </View>
     );
   }
@@ -107,152 +95,158 @@ export default function BarDetailScreen() {
   const isHappyHourActive = checkHappyHour(bar);
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-planb-cream">
       <ScrollView>
-        {/* Header */}
-        <View className="relative">
-          <Image
-            source={{ uri: bar.photo }}
-            className="w-full h-64"
-            resizeMode="cover"
-          />
+        {/* Hero image */}
+        <View style={{ position: 'relative', height: 288, width: '100%' }}>
+          {bar.photo ? (
+            <Image
+              source={{ uri: bar.photo }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <DefaultBarPhoto width="100%" height={288} />
+          )}
+          <View className="absolute inset-0" style={{ backgroundColor: 'rgba(14, 9, 6, 0.2)' }} />
           {isHappyHourActive && (
-            <View className="absolute top-4 left-4 bg-orange-500 px-4 py-2 rounded-full">
-              <Text className="text-white font-semibold">
-                Happy Hour en cours !
-              </Text>
+            <View className="absolute top-14 left-4 flex-row items-center gap-1.5 px-4 py-2 rounded-full" style={{ backgroundColor: '#FF8B60' }}>
+              <Clock size={13} color="#FDFAEA" strokeWidth={2.5} />
+              <Text className="text-planb-cream font-bold text-sm">Happy Hour en cours !</Text>
             </View>
           )}
-          <View className="absolute top-12 right-4 flex-row gap-2">
+          <View className="absolute top-14 right-4 flex-row gap-2">
             <TouchableOpacity
               onPress={() => router.push(`/bar/edit/${id}`)}
-              className="bg-white rounded-full p-2 shadow-lg"
+              className="w-10 h-10 rounded-full items-center justify-center"
+              style={{ backgroundColor: 'rgba(253, 250, 234, 0.9)' }}
             >
-              <Text className="text-xl">✏️</Text>
+              <Pencil size={16} color="#100906" strokeWidth={2} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.back()}
-              className="bg-white rounded-full p-2 shadow-lg"
+              className="w-10 h-10 rounded-full items-center justify-center"
+              style={{ backgroundColor: 'rgba(253, 250, 234, 0.9)' }}
             >
-              <Text className="text-2xl">×</Text>
+              <X size={18} color="#100906" strokeWidth={2} />
             </TouchableOpacity>
           </View>
         </View>
 
-        <View className="p-6 gap-6">
-          {/* Bar Info */}
-          <View>
-            <View className="flex-row items-start justify-between mb-2">
-              <View className="flex-1">
-                <Text className="text-2xl font-bold mb-1">{bar.name}</Text>
-                <Text className="text-gray-600">{bar.type}</Text>
+        <View className="px-5 -mt-6">
+          {/* Main card */}
+          <View className="bg-white rounded-2xl p-5 mb-4" style={{ shadowColor: '#100906', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
+            <View className="flex-row items-start justify-between mb-1">
+              <View className="flex-1 mr-3">
+                <Text className="text-2xl font-bold text-planb-dark">{bar.name}</Text>
+                <View className="mt-1 self-start rounded-full px-3 py-1" style={{ backgroundColor: '#F8ECAB' }}>
+                  <Text className="text-planb-dark text-xs font-semibold">{bar.type}</Text>
+                </View>
               </View>
-              <View className="flex-row items-center gap-1">
-                <StarIcon filled />
-                <Text className="text-xl font-semibold">{bar.rating || 0}</Text>
+              <View className="flex-row items-center gap-1 mt-1">
+                <Star size={16} color="#F59E0B" fill="#F59E0B" />
+                <Text className="text-xl font-bold text-planb-dark">{bar.rating || 0}</Text>
               </View>
             </View>
 
             <View className="flex-row items-start gap-2 mt-4">
-              <MapPinIcon />
-              <Text className="text-gray-600 flex-1">{bar.address}</Text>
+              <MapPin size={15} color="#6B5C4D" strokeWidth={2} style={{ marginTop: 2 }} />
+              <Text className="text-planb-dark opacity-60 flex-1">{bar.address}</Text>
             </View>
           </View>
 
-          {/* Separator */}
-          <View className="h-px bg-gray-200" />
-
-          {/* Happy Hour */}
-          <View>
+          {/* Happy Hour card */}
+          <View className="bg-white rounded-2xl p-5 mb-4" style={{ shadowColor: '#100906', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
             <View className="flex-row items-center gap-2 mb-3">
-              <ClockIcon />
-              <Text className="text-lg font-semibold">Happy Hour</Text>
+              <Clock size={16} color="#8E1212" strokeWidth={2} />
+              <Text className="text-lg font-bold text-planb-dark">Happy Hour</Text>
             </View>
-            <Text className="text-gray-600 mb-4">
-              De {bar.happyHourStart} à {bar.happyHourEnd}
-            </Text>
+            <View className="rounded-xl px-4 py-2.5 mb-4" style={{ backgroundColor: '#F8ECAB' }}>
+              <Text className="text-planb-dark font-semibold text-center">
+                {bar.happyHourStart} — {bar.happyHourEnd}
+              </Text>
+            </View>
 
-            <View className="flex-row gap-4">
-              <View className="flex-1 p-4 rounded-lg bg-green-50 border border-green-200">
-                <View className="flex-row items-center gap-2 mb-2">
-                  <EuroIcon />
-                  <Text className="text-sm text-gray-600">Bière</Text>
-                </View>
-                <Text className="text-2xl text-green-700 font-bold">
+            <View className="flex-row gap-3">
+              <View className="flex-1 p-4 rounded-xl" style={{ backgroundColor: '#FFF5EE' }}>
+                <Text className="text-xs text-planb-dark opacity-50 mb-1">Bière</Text>
+                <Text className="text-2xl font-bold" style={{ color: '#8E1212' }}>
                   {bar.prices?.beer || 0}€
                 </Text>
               </View>
 
-              <View className="flex-1 p-4 rounded-lg bg-green-50 border border-green-200">
-                <View className="flex-row items-center gap-2 mb-2">
-                  <EuroIcon />
-                  <Text className="text-sm text-gray-600">Cocktail</Text>
-                </View>
-                <Text className="text-2xl text-green-700 font-bold">
+              <View className="flex-1 p-4 rounded-xl" style={{ backgroundColor: '#FFF5EE' }}>
+                <Text className="text-xs text-planb-dark opacity-50 mb-1">Cocktail</Text>
+                <Text className="text-2xl font-bold" style={{ color: '#8E1212' }}>
                   {bar.prices?.cocktail || 0}€
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Separator */}
-          <View className="h-px bg-gray-200" />
-
           {/* Reviews */}
-          <View>
+          <View className="bg-white rounded-2xl p-5 mb-8" style={{ shadowColor: '#100906', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-lg font-semibold">
-                Avis des clients ({reviews.length})
+              <Text className="text-lg font-bold text-planb-dark">
+                Avis ({reviews.length})
               </Text>
               <TouchableOpacity
                 onPress={handleAddReview}
-                className="bg-orange-500 px-4 py-2 rounded-lg flex-row items-center gap-2"
+                className="px-4 py-2.5 rounded-xl flex-row items-center gap-1.5"
+                style={{ backgroundColor: '#FF8B60' }}
               >
-                <PlusIcon />
-                <Text className="text-white font-semibold">Ajouter</Text>
+                <Plus size={14} color="#FDFAEA" strokeWidth={2.5} />
+                <Text className="text-planb-cream font-bold text-sm">Ajouter</Text>
               </TouchableOpacity>
             </View>
 
             {reviews.length === 0 ? (
               <View className="py-8 items-center">
-                <Text className="text-gray-500 text-center">
+                <Text className="text-planb-dark opacity-40 text-center">
                   Aucun avis pour le moment
                 </Text>
-                <Text className="text-gray-400 text-sm mt-2 text-center">
+                <Text className="text-planb-dark opacity-30 text-sm mt-2 text-center">
                   Soyez le premier à laisser un avis !
                 </Text>
               </View>
             ) : (
-              <View className="gap-4">
+              <View className="gap-3">
                 {reviews.map((review) => (
                   <View
                     key={review?.id}
-                    className="p-4 rounded-lg border border-gray-200"
+                    className="p-4 rounded-xl"
+                    style={{ backgroundColor: '#FDFAEA' }}
                   >
-                    <View className="flex-row items-start gap-3 mb-3">
-                      <View className="w-10 h-10 rounded-full bg-gray-200 items-center justify-center">
-                        <UserIcon />
+                    <View className="flex-row items-start gap-3 mb-2">
+                      <View className="w-9 h-9 rounded-full items-center justify-center" style={{ backgroundColor: '#F8ECAB' }}>
+                        <User size={16} color="#8E1212" strokeWidth={2} />
                       </View>
                       <View className="flex-1">
                         <View className="flex-row items-center justify-between mb-1">
-                          <Text className="font-semibold">
+                          <Text className="font-bold text-planb-dark">
                             {review?.userName}
                           </Text>
-                          <Text className="text-sm text-gray-500">
+                          <Text className="text-xs text-planb-dark opacity-40">
                             {new Date(review?.date).toLocaleDateString('fr-FR')}
                           </Text>
                         </View>
 
-                        <View className="flex-row gap-1">
+                        <View className="flex-row gap-0.5">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <StarIcon key={i} filled={i < review?.rating} />
+                            <Star
+                              key={i}
+                              size={13}
+                              color="#F59E0B"
+                              fill={i < review?.rating ? '#F59E0B' : 'transparent'}
+                              strokeWidth={1.5}
+                            />
                           ))}
                         </View>
                       </View>
                     </View>
 
                     {review?.comment && (
-                      <Text className="text-gray-600">{review?.comment}</Text>
+                      <Text className="text-planb-dark opacity-70 mt-1">{review?.comment}</Text>
                     )}
                   </View>
                 ))}
@@ -262,7 +256,6 @@ export default function BarDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Modals */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -281,4 +274,3 @@ export default function BarDetailScreen() {
     </View>
   );
 }
-

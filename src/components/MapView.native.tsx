@@ -1,6 +1,22 @@
 import { View, Text, StyleSheet } from 'react-native';
 import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Clock } from 'lucide-react-native';
 import { Bar } from '../types';
+
+// Cache uniquement nos markers + noms de rues, sans les POIs Google
+const CLEAN_MAP_STYLE = [
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.attraction', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.government', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.school', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.sports_complex', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'on' }] },
+];
 
 interface MapViewProps {
   bars: Bar[];
@@ -11,7 +27,7 @@ interface MapViewProps {
 
 export function MapView({ bars, center, onBarClick, checkHappyHour }: MapViewProps) {
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       <RNMapView
         provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFillObject}
@@ -21,67 +37,123 @@ export function MapView({ bars, center, onBarClick, checkHappyHour }: MapViewPro
           latitudeDelta: 0.02,
           longitudeDelta: 0.03,
         }}
+        customMapStyle={CLEAN_MAP_STYLE}
         showsUserLocation
         showsMyLocationButton
+        showsPointsOfInterest={false}
       >
         {bars.map((bar) => {
           const isHappyHour = checkHappyHour(bar);
-          
           return (
             <Marker
               key={bar.id}
-              coordinate={{
-                latitude: bar.latitude,
-                longitude: bar.longitude,
-              }}
-              pinColor={isHappyHour ? '#f97316' : '#ef4444'}
+              coordinate={{ latitude: bar.latitude, longitude: bar.longitude }}
               onPress={() => onBarClick(bar)}
               title={bar.name}
-              description={`${bar.rating}/5 ⭐ | 🍺 ${bar.prices.beer}€`}
+              description={`${bar.rating}/5 ★  Bière ${bar.prices.beer}€`}
             >
-              <View className="items-center">
+              <View style={{ alignItems: 'center' }}>
                 <View
-                  className={`${
-                    isHappyHour ? 'bg-orange-500' : 'bg-red-500'
-                  } rounded-full p-2 border-2 border-white shadow-lg`}
+                  style={{
+                    backgroundColor: isHappyHour ? '#FF8B60' : '#8E1212',
+                    borderRadius: 20,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderWidth: 2,
+                    borderColor: '#FFFFFF',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 4,
+                    elevation: 4,
+                  }}
                 >
-                  <Text className="text-white text-lg">📍</Text>
+                  <Text style={{ color: '#FDFAEA', fontSize: 11, fontWeight: '700' }}>
+                    {bar.name.length > 12 ? bar.name.slice(0, 11) + '…' : bar.name}
+                  </Text>
                 </View>
+                {/* Pointe */}
+                <View
+                  style={{
+                    width: 0,
+                    height: 0,
+                    borderLeftWidth: 5,
+                    borderRightWidth: 5,
+                    borderTopWidth: 6,
+                    borderLeftColor: 'transparent',
+                    borderRightColor: 'transparent',
+                    borderTopColor: isHappyHour ? '#FF8B60' : '#8E1212',
+                    marginTop: -1,
+                  }}
+                />
               </View>
             </Marker>
           );
         })}
       </RNMapView>
 
-      {/* Legend */}
-      <View className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4">
-        <Text className="font-semibold mb-3 text-lg">Légende</Text>
-        <View className="gap-2">
-          <View className="flex-row items-center gap-2">
-            <View className="bg-orange-500 rounded-full p-1">
-              <Text>📍</Text>
+      {/* Légende */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 100,
+          left: 12,
+          backgroundColor: '#FFFFFF',
+          borderRadius: 14,
+          padding: 12,
+          shadowColor: '#100906',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 6,
+          borderWidth: 1,
+          borderColor: '#E8E0D0',
+          minWidth: 150,
+        }}
+      >
+        <Text style={{ fontWeight: '700', fontSize: 12, color: '#100906', marginBottom: 8 }}>
+          Légende
+        </Text>
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FF8B60', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 }}>
+              <Clock size={10} color="#FDFAEA" strokeWidth={2.5} />
+              <Text style={{ color: '#FDFAEA', fontSize: 10, fontWeight: '700' }}>HH</Text>
             </View>
-            <Text className="text-sm">Happy Hour actif</Text>
+            <Text style={{ fontSize: 12, color: '#6B5C4D' }}>Happy Hour actif</Text>
           </View>
-          <View className="flex-row items-center gap-2">
-            <View className="bg-red-500 rounded-full p-1">
-              <Text>📍</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ backgroundColor: '#8E1212', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 }}>
+              <Text style={{ color: '#FDFAEA', fontSize: 10, fontWeight: '700' }}>Bar</Text>
             </View>
-            <Text className="text-sm">Bar disponible</Text>
+            <Text style={{ fontSize: 12, color: '#6B5C4D' }}>Bar disponible</Text>
           </View>
         </View>
       </View>
 
-      {/* Info banner */}
-      <View className="absolute top-4 self-center">
-        <View className="bg-white/90 rounded-full px-4 py-2 shadow-md">
-          <Text className="text-sm font-semibold">
-            {bars.length} bar{bars.length > 1 ? 's' : ''} trouvé{bars.length > 1 ? 's' : ''}
-          </Text>
-        </View>
+      {/* Compteur de bars */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 12,
+          alignSelf: 'center',
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          borderRadius: 20,
+          paddingHorizontal: 16,
+          paddingVertical: 7,
+          shadowColor: '#100906',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.12,
+          shadowRadius: 6,
+          elevation: 4,
+          borderWidth: 1,
+          borderColor: '#E8E0D0',
+        }}
+      >
+        <Text style={{ fontSize: 13, fontWeight: '600', color: '#100906' }}>
+          {bars.length} bar{bars.length !== 1 ? 's' : ''} trouvé{bars.length !== 1 ? 's' : ''}
+        </Text>
       </View>
     </View>
   );
 }
-
-

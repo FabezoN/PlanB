@@ -1,9 +1,10 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import { projectId, publicAnonKey } from './info';
 
-// Singleton Supabase client to avoid multiple instances
+const projectId = process.env.EXPO_PUBLIC_SUPABASE_PROJECT_ID!;
+const publicAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
 let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
 export function getSupabaseClient() {
